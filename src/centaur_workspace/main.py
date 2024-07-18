@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from my_crewai_project.crew import MyProjectCrew
+from centaur_workspace.crew import MyProjectCrew
 
 def main():
     load_dotenv()

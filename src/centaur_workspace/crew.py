@@ -1,10 +1,5 @@
-import os
-from openai import OpenAI
 from crewai import Agent, Task, Crew, Process
-from dotenv import load_dotenv
 from .tools.custom_tool import CustomTool
-
-load_dotenv()
 
 class MyProjectCrew:
     def __init__(self):
@@ -30,6 +25,14 @@ class MyProjectCrew:
         ]
 
     def chat(self, user_input):
-        # Use the responder agent to handle the user input
-        result = self.agents[1].execute_task(user_input)
-        return result
+        task = Task(
+            description=f"Respond to the user's input: {user_input}",
+            expected_output="A friendly and engaging response to the user's input",
+            agent=self.agents[1]
+        )
+        crew = Crew(
+            agents=self.agents,
+            tasks=[task],
+            verbose=2
+        )
+        return crew.kickoff()

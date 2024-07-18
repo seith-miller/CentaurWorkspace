@@ -2,4 +2,6 @@ __pycache__/
 
 venv/
 
-src/my_crewai_project/venv/
+src/centaur_workspace/venv/
+
+.env

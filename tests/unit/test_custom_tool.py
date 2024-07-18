@@ -1,5 +1,5 @@
 import pytest
-from my_crewai_project.tools.custom_tool import CustomTool
+from centaur_workspace.tools.custom_tool import CustomTool
 
 def test_custom_tool():
     tool = CustomTool()
