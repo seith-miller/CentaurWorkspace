@@ -1,6 +1,7 @@
-from crewai_tools import BaseTool
+from crewai_tools.tools import RagTool
 
-class CustomTool(BaseTool):
+
+class CustomTool(RagTool):
     name: str = "Custom Greeting Tool"
     description: str = "A tool that generates custom greetings."
 

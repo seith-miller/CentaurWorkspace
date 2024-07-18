@@ -21,6 +21,14 @@ flake8 = "^6.0.0"
 black = "^23.0.0"
 pre-commit = "^2.21.0"
 
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
