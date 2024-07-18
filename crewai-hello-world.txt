@@ -1,0 +1,159 @@
+<<CENTAURPACK_VERSION:1.0>>
+<<FILE:crewai-hello-world.txt>>
+
+<<ENDFILE>>
+<<FILE:README.md>>
+# My CrewAI Project
+
+This is a simple "Hello World" style project using CrewAI.
+
+## Setup
+
+1. Install dependencies:
+
+
+<<ENDFILE>>
+<<DIR:.pytest_cache>>
+<<FILE:.pytest_cache/README.md>>
+# pytest cache directory #
+
+This directory contains data from the pytest's cache plugin,
+which provides the `--lf` and `--ff` options, as well as the `cache` fixture.
+
+**Do not** commit this to version control.
+
+See [the docs](https://docs.pytest.org/en/stable/how-to/cache.html) for more information.
+
+<<ENDFILE>>
+<<DIR:.pytest_cache/v>>
+<<DIR:.pytest_cache/v/cache>>
+<<DIR:tests>>
+<<DIR:tests/unit>>
+<<FILE:tests/unit/test_custom_tool.py>>
+import pytest
+from my_crewai_project.tools.custom_tool import CustomTool
+
+def test_custom_tool():
+    tool = CustomTool()
+    result = tool._run("Alice")
+    assert result == "Hello, Alice! Welcome to our CrewAI project."
+
+    result = tool._run()
+    assert result == "Hello, User! Welcome to our CrewAI project."
+
+
+<<ENDFILE>>
+<<DIR:tests/unit/__pycache__>>
+<<DIR:src>>
+<<DIR:src/my_crewai_project>>
+<<FILE:src/my_crewai_project/__init__.py>>
+# This file is intentionally left empty to mark the directory as a Python package.
+
+
+<<ENDFILE>>
+<<FILE:src/my_crewai_project/crew.py>>
+import os
+from openai import OpenAI
+from crewai import Agent, Task, Crew, Process
+from dotenv import load_dotenv
+from .tools.custom_tool import CustomTool
+
+load_dotenv()
+
+class MyProjectCrew:
+    def __init__(self):
+        self.custom_tool = CustomTool()
+        self.agents = self.create_agents()
+
+    def create_agents(self):
+        return [
+            Agent(
+                role='Greeter',
+                goal='Greet the user warmly',
+                backstory='You are an enthusiastic AI assistant eager to welcome users.',
+                tools=[self.custom_tool],
+                verbose=True
+            ),
+            Agent(
+                role='Responder',
+                goal='Respond to the user greeting and engage in a pleasant conversation.',
+                backstory='You are a polite AI assistant that enjoys conversing with users.',
+                tools=[self.custom_tool],
+                verbose=True
+            )
+        ]
+
+    def chat(self, user_input):
+        # Use the responder agent to handle the user input
+        result = self.agents[1].execute_task(user_input)
+        return result
+
+<<ENDFILE>>
+<<FILE:src/my_crewai_project/main.py>>
+import os
+from dotenv import load_dotenv
+from my_crewai_project.crew import MyProjectCrew
+
+def main():
+    load_dotenv()
+
+    api_key = os.getenv('OPENAI_API_KEY')
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is not set.")
+
+    crew = MyProjectCrew()
+
+    while True:
+        user_input = input("You: ")
+        if user_input.lower() in ['exit', 'quit']:
+            break
+        response = crew.chat(user_input)
+        print(f"AI: {response}")
+
+if __name__ == "__main__":
+    main()
+
+<<ENDFILE>>
+<<DIR:src/my_crewai_project/tools>>
+<<FILE:src/my_crewai_project/tools/__init__.py>>
+from .custom_tool import CustomTool
+
+<<ENDFILE>>
+<<FILE:src/my_crewai_project/tools/custom_tool.py>>
+from crewai_tools import BaseTool
+
+class CustomTool(BaseTool):
+    name: str = "Custom Greeting Tool"
+    description: str = "A tool that generates custom greetings."
+
+    def _run(self, name: str = "User") -> str:
+        return f"Hello, {name}! Welcome to our CrewAI project."
+
+<<ENDFILE>>
+<<DIR:src/my_crewai_project/tools/__pycache__>>
+<<DIR:src/my_crewai_project/config>>
+<<FILE:src/my_crewai_project/config/agents.yaml>>
+greeter:
+    role: Greeter
+    goal: Greet the user warmly
+    backstory: >
+        You are an enthusiastic AI assistant eager to welcome users.
+
+responder:
+    role: Responder
+    goal: Respond to the user's greeting
+    backstory: >
+        You are a polite AI assistant that engages in pleasant conversation.
+
+<<ENDFILE>>
+<<FILE:src/my_crewai_project/config/tasks.yaml>>
+greet_user:
+    description: Greet the user with a warm welcome message.
+    agent: greeter
+
+respond_to_user:
+    description: Respond to the user's greeting and ask how they are doing.
+    agent: responder
+
+<<ENDFILE>>
+<<DIR:src/my_crewai_project/__pycache__>>

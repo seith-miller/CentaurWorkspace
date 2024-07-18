@@ -1,0 +1,7 @@
+greet_user:
+    description: Greet the user with a warm welcome message.
+    agent: greeter
+
+respond_to_user:
+    description: Respond to the user's greeting and ask how they are doing.
+    agent: responder
