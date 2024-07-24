@@ -1,11 +1,13 @@
 from crewai import Agent, Crew, Task
 from .tools.custom_tool import CustomTool
+from .tools.google_drive_tool import GoogleDriveTool
 
 
 class MyProjectCrew:
     def __init__(self):
         self.custom_tool = CustomTool()
         self.agents = self.create_agents()
+        self.google_drive_tool = GoogleDriveTool()
         self.dave_conversation = []
 
     def create_agents(self):
@@ -48,7 +50,7 @@ class MyProjectCrew:
                     "detailed PRDs, and ensure the product aligns with the "
                     "company's vision."
                 ),
-                tools=[self.custom_tool],
+                tools=[self.custom_tool, self.google_drive_tool],
                 verbose=True,
             ),
         ]
