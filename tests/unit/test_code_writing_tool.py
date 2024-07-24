@@ -23,7 +23,31 @@ def test_code_writing_tool_run(mock_openai):
         0
     ].message.content = "def example_function():\n    pass"
     result = tool._run("create an example function")
+    assert "```python" in result
     assert "def example_function():" in result
+    assert "```" in result
+
+
+def test_code_writing_tool_run_empty_task():
+    tool = CodeWritingTool()
+    with pytest.raises(ValueError, match="Task cannot be empty."):
+        tool._run("")
+
+
+def test_code_writing_tool_run_no_response(mock_openai):
+    tool = CodeWritingTool()
+    mock_openai.chat.completions.create.return_value.choices = []
+    result = tool._run("create an example function")
+    assert "An error occurred" in result
+    assert "No response generated" in result
+
+
+def test_code_writing_tool_run_empty_response(mock_openai):
+    tool = CodeWritingTool()
+    mock_openai.chat.completions.create.return_value.choices[0].message.content = ""
+    result = tool._run("create an example function")
+    assert "An error occurred" in result
+    assert "Generated code is empty" in result
 
 
 @pytest.mark.asyncio
@@ -31,6 +55,8 @@ async def test_code_writing_tool_arun(mock_openai):
     tool = CodeWritingTool()
     mock_openai.chat.completions.create.return_value.choices[
         0
-    ].message.content = "def async_function():\n    pass"
+    ].message.content = "async def async_function():\n    pass"
     result = await tool._arun("create an async function")
-    assert "def async_function():" in result
+    assert "```python" in result
+    assert "async def async_function():" in result
+    assert "```" in result
