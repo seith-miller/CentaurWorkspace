@@ -1,0 +1,321 @@
+<<CENTAURPACK_VERSION:1.0>>
+<<FILE:.pre-commit-config.yaml>>
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.0.1
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+
+  - repo: https://github.com/psf/black
+    rev: 23.7.0
+    hooks:
+      - id: black
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.1.0
+    hooks:
+      - id: flake8
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+
+<<ENDFILE>>
+<<FILE:README.md>>
+# My CrewAI Project
+
+This is a simple "Hello World" style project using CrewAI.
+
+## Setup
+
+1. Install dependencies:
+
+<<ENDFILE>>
+<<DIR:.pytest_cache>>
+<<FILE:.pytest_cache/README.md>>
+# pytest cache directory #
+
+This directory contains data from the pytest's cache plugin,
+which provides the `--lf` and `--ff` options, as well as the `cache` fixture.
+
+**Do not** commit this to version control.
+
+See [the docs](https://docs.pytest.org/en/stable/how-to/cache.html) for more information.
+
+<<ENDFILE>>
+<<DIR:.pytest_cache/v>>
+<<DIR:.pytest_cache/v/cache>>
+<<DIR:tests>>
+<<DIR:tests/unit>>
+<<FILE:tests/unit/test_code_writing_tool.py>>
+import pytest
+import pytest_asyncio
+from centaur_workspace.tools.code_writing_tool import CodeWritingTool
+
+pytestmark = pytest.mark.asyncio
+
+def test_code_writing_tool_initialization():
+    tool = CodeWritingTool()
+    assert tool.name == "Code Writing Tool"
+    assert "assists in writing Python code" in tool.description
+
+def test_code_writing_tool_run():
+    tool = CodeWritingTool()
+    result = tool._run("calculate fibonacci")
+    assert "def solve_calculate_fibonacci():" in result
+    assert "# TODO: Implement calculate fibonacci" in result
+
+@pytest.mark.asyncio
+async def test_code_writing_tool_arun():
+    tool = CodeWritingTool()
+    result = await tool._arun("sort list")
+    assert "def solve_sort_list():" in result
+    assert "# TODO: Implement sort list" in result
+
+<<ENDFILE>>
+<<FILE:tests/unit/test_custom_tool.py>>
+from dotenv import load_dotenv
+from centaur_workspace.tools.custom_tool import CustomTool
+
+
+def test_custom_tool():
+    load_dotenv()  # This will load the API key from .env
+    tool = CustomTool()
+    result = tool._run("Alice")
+    assert result == "Hello, Alice! Welcome to our CrewAI project."
+
+    result = tool._run()
+    assert result == "Hello, User! Welcome to our CrewAI project."
+
+<<ENDFILE>>
+<<DIR:tests/unit/__pycache__>>
+<<DIR:db>>
+<<DIR:.git>>
+<<DIR:.git/objects>>
+<<DIR:.git/objects/92>>
+<<DIR:.git/objects/03>>
+<<DIR:.git/objects/9e>>
+<<DIR:.git/objects/32>>
+<<DIR:.git/objects/3c>>
+<<DIR:.git/objects/51>>
+<<DIR:.git/objects/3d>>
+<<DIR:.git/objects/0b>>
+<<DIR:.git/objects/93>>
+<<DIR:.git/objects/5f>>
+<<DIR:.git/objects/a4>>
+<<DIR:.git/objects/ad>>
+<<DIR:.git/objects/bd>>
+<<DIR:.git/objects/d1>>
+<<DIR:.git/objects/ae>>
+<<DIR:.git/objects/d8>>
+<<DIR:.git/objects/e5>>
+<<DIR:.git/objects/c0>>
+<<DIR:.git/objects/f5>>
+<<DIR:.git/objects/e3>>
+<<DIR:.git/objects/cf>>
+<<DIR:.git/objects/ed>>
+<<DIR:.git/objects/c6>>
+<<DIR:.git/objects/4b>>
+<<DIR:.git/objects/pack>>
+<<DIR:.git/objects/7d>>
+<<DIR:.git/objects/29>>
+<<DIR:.git/objects/42>>
+<<DIR:.git/objects/7b>>
+<<DIR:.git/objects/8a>>
+<<DIR:.git/objects/7e>>
+<<DIR:.git/objects/43>>
+<<DIR:.git/objects/9f>>
+<<DIR:.git/objects/6b>>
+<<DIR:.git/objects/00>>
+<<DIR:.git/objects/info>>
+<<DIR:.git/objects/3a>>
+<<DIR:.git/objects/5e>>
+<<DIR:.git/objects/5b>>
+<<DIR:.git/objects/37>>
+<<DIR:.git/objects/39>>
+<<DIR:.git/objects/64>>
+<<DIR:.git/objects/a0>>
+<<DIR:.git/objects/db>>
+<<DIR:.git/objects/a8>>
+<<DIR:.git/objects/a6>>
+<<DIR:.git/objects/b9>>
+<<DIR:.git/objects/c4>>
+<<DIR:.git/objects/e1>>
+<<DIR:.git/objects/cd>>
+<<DIR:.git/objects/c2>>
+<<DIR:.git/objects/f6>>
+<<DIR:.git/objects/cb>>
+<<DIR:.git/objects/41>>
+<<DIR:.git/objects/8d>>
+<<DIR:.git/objects/15>>
+<<DIR:.git/objects/12>>
+<<DIR:.git/objects/8c>>
+<<DIR:.git/objects/1d>>
+<<DIR:.git/objects/1c>>
+<<DIR:.git/objects/82>>
+<<DIR:.git/objects/49>>
+<<DIR:.git/objects/78>>
+<<DIR:.git/objects/22>>
+<<DIR:.git/info>>
+<<DIR:.git/logs>>
+<<DIR:.git/logs/refs>>
+<<DIR:.git/logs/refs/heads>>
+<<DIR:.git/logs/refs/remotes>>
+<<DIR:.git/logs/refs/remotes/origin>>
+<<DIR:.git/hooks>>
+<<DIR:.git/refs>>
+<<DIR:.git/refs/heads>>
+<<DIR:.git/refs/tags>>
+<<DIR:.git/refs/remotes>>
+<<DIR:.git/refs/remotes/origin>>
+<<DIR:src>>
+<<DIR:src/centaur_workspace>>
+<<FILE:src/centaur_workspace/__init__.py>>
+# This file is intentionally left empty to mark the directory as a Python package.
+
+<<ENDFILE>>
+<<FILE:src/centaur_workspace/crew.py>>
+from crewai import Agent, Crew, Task
+
+from .tools.custom_tool import CustomTool
+
+
+class MyProjectCrew:
+    def __init__(self):
+        self.custom_tool = CustomTool()
+        self.agents = self.create_agents()
+
+    def create_agents(self):
+        return [
+            Agent(
+                role="Greeter",
+                goal="Greet the user warmly",
+                backstory=(
+                    "You are an enthusiastic AI assistant eager to welcome " "users."
+                ),
+                tools=[self.custom_tool],
+                verbose=True,
+            ),
+            Agent(
+                role="Responder",
+                goal="Respond to the user greeting and engage in a pleasant "
+                "conversation.",
+                backstory=(
+                    "You are a polite AI assistant that enjoys conversing with "
+                    "users."
+                ),
+                tools=[self.custom_tool],
+                verbose=True,
+            ),
+        ]
+
+    def chat(self, user_input):
+        task = Task(
+            description=f"Respond to the user's input: {user_input}",
+            expected_output="A friendly and engaging response to the user's input",
+            agent=self.agents[1],
+        )
+        crew = Crew(agents=self.agents, tasks=[task], verbose=2)
+        return crew.kickoff()
+
+<<ENDFILE>>
+<<FILE:src/centaur_workspace/main.py>>
+import os
+
+from dotenv import load_dotenv
+
+from centaur_workspace.crew import MyProjectCrew
+
+
+def main():
+    load_dotenv()
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is not set.")
+
+    crew = MyProjectCrew()
+
+    while True:
+        user_input = input("You: ")
+        if user_input.lower() in ["exit", "quit"]:
+            break
+        response = crew.chat(user_input)
+        print(f"AI: {response}")
+
+
+if __name__ == "__main__":
+    main()
+
+<<ENDFILE>>
+<<DIR:src/centaur_workspace/tools>>
+<<FILE:src/centaur_workspace/tools/__init__.py>>
+# This file is intentionally left empty to mark the directory as a Python package.
+
+<<ENDFILE>>
+<<FILE:src/centaur_workspace/tools/code_writing_tool.py>>
+from crewai_tools import BaseTool
+
+class CodeWritingTool(BaseTool):
+    name: str = "Code Writing Tool"
+    description: str = "A tool that assists in writing Python code."
+
+    def _run(self, task: str) -> str:
+        # This is a simple implementation. In a real scenario,
+        # this would interface with an LLM for code generation.
+        return f"""
+        def solve_{task.lower().replace(' ', '_')}():
+            # TODO: Implement {task}
+            pass
+        """
+
+    async def _arun(self, task: str) -> str:
+        # Async implementation
+        return self._run(task)
+
+<<ENDFILE>>
+<<FILE:src/centaur_workspace/tools/custom_tool.py>>
+from crewai_tools.tools import RagTool
+
+
+class CustomTool(RagTool):
+    name: str = "Custom Greeting Tool"
+    description: str = "A tool that generates custom greetings."
+
+    def _run(self, name: str = "User") -> str:
+        return f"Hello, {name}! Welcome to our CrewAI project."
+
+<<ENDFILE>>
+<<DIR:src/centaur_workspace/tools/__pycache__>>
+<<DIR:src/centaur_workspace/config>>
+<<FILE:src/centaur_workspace/config/agents.yaml>>
+greeter:
+    role: Greeter
+    goal: Greet the user warmly
+    backstory: >
+        You are an enthusiastic AI assistant eager to welcome users.
+
+responder:
+    role: Responder
+    goal: Respond to the user's greeting
+    backstory: >
+        You are a polite AI assistant that engages in pleasant conversation.
+
+<<ENDFILE>>
+<<FILE:src/centaur_workspace/config/tasks.yaml>>
+greet_user:
+    description: Greet the user with a warm welcome message.
+    agent: greeter
+
+respond_to_user:
+    description: Respond to the user's greeting and ask how they are doing.
+    agent: responder
+
+<<ENDFILE>>
+<<DIR:src/centaur_workspace/__pycache__>>
