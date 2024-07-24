@@ -23,9 +23,8 @@ def test_code_writing_tool_run(mock_openai):
         0
     ].message.content = "def example_function():\n    pass"
     result = tool._run("create an example function")
-    assert "```python" in result
     assert "def example_function():" in result
-    assert "```" in result
+    assert "pass" in result
 
 
 def test_code_writing_tool_run_empty_task():
@@ -57,6 +56,5 @@ async def test_code_writing_tool_arun(mock_openai):
         0
     ].message.content = "async def async_function():\n    pass"
     result = await tool._arun("create an async function")
-    assert "```python" in result
     assert "async def async_function():" in result
-    assert "```" in result
+    assert "pass" in result

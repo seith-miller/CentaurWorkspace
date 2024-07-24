@@ -25,7 +25,7 @@ class CodeWritingTool(BaseTool):
 
         prompt = (
             f"Write Python code to {task}. "
-            "Provide only the code without any explanations."
+            "Provide only the code without any explanations or markup."
         )
 
         messages: list[ChatCompletionMessageParam] = [
@@ -33,7 +33,8 @@ class CodeWritingTool(BaseTool):
                 "role": "system",
                 "content": (
                     "You are a skilled Python programmer. Generate concise, "
-                    "working Python code based on the given task."
+                    "working Python code based on the given task. Do not include "
+                    "any markdown formatting or code block indicators."
                 ),
             },
             {"role": "user", "content": prompt},
@@ -55,11 +56,10 @@ class CodeWritingTool(BaseTool):
             if not code:
                 raise ValueError("Generated code is empty.")
 
-            return f"```python\n{code}\n```"
+            return code
 
         except Exception as e:
             error_message = f"An error occurred while generating code: {str(e)}"
-            # Log the error for debugging
             print(f"Error in CodeWritingTool: {error_message}")
             return error_message
 
