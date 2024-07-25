@@ -5,9 +5,13 @@ from crewai_tools import BaseTool
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from google.auth.transport.requests import Request
-from google_auth_oauthlib.flow import InstalledAppFlow  # Add this import
+from google_auth_oauthlib.flow import InstalledAppFlow
+from dotenv import load_dotenv
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
+
+# Load environment variables
+load_dotenv()
 
 
 class GoogleDriveBaseTool(BaseTool):
@@ -36,20 +40,29 @@ class GoogleDriveBaseTool(BaseTool):
 
 class GoogleDriveListTool(GoogleDriveBaseTool):
     name: str = "Google Drive List Tool"
-    description: str = "Lists files in your Google Drive."
+    description: str = "Lists files in a specific folder in your Google Drive."
 
     def _run(self) -> str:
         try:
+            folder_id = os.getenv("GOOGLE_DRIVE_ROOT_FOLDER_ID")
+            if not folder_id:
+                return "Root folder ID is not set in the environment variables."
+
             creds = self._get_credentials()
             service = build("drive", "v3", credentials=creds)
+            query = f"'{folder_id}' in parents"
             results = (
                 service.files()
-                .list(pageSize=10, fields="nextPageToken, files(id, name, mimeType)")
+                .list(
+                    q=query,
+                    pageSize=10,
+                    fields="nextPageToken, files(id, name, mimeType)",
+                )
                 .execute()
             )
             items = results.get("files", [])
             if not items:
-                return "No files found."
+                return "No files found in the specified folder."
             return "\n".join(
                 [
                     f"{item['name']} ({item['id']}) - {item['mimeType']}"
