@@ -17,6 +17,22 @@ class Agent(CrewAIAgent):
     def llm_provider(self):
         return self._llm_provider
 
+    def generate_text(self, prompt: str, max_tokens: int = 500) -> str:
+        return self.llm_provider.generate_text(prompt, max_tokens)
+
+    async def generate_text_async(self, prompt: str, max_tokens: int = 500) -> str:
+        return await self.llm_provider.generate_text_async(prompt, max_tokens)
+
+    def generate_chat_completion(self, messages: list, max_tokens: int = 500) -> str:
+        return self.llm_provider.generate_chat_completion(messages, max_tokens)
+
+    async def generate_chat_completion_async(
+        self, messages: list, max_tokens: int = 500
+    ) -> str:
+        return await self.llm_provider.generate_chat_completion_async(
+            messages, max_tokens
+        )
+
 
 class MyProjectCrew:
     def __init__(self):
@@ -42,8 +58,8 @@ class MyProjectCrew:
             Agent(
                 role="Responder",
                 goal=(
-                    "Respond to the user greeting and engage in a "
-                    "pleasant conversation."
+                    "Respond to the user greeting and engage in a pleasant "
+                    "conversation."
                 ),
                 backstory=(
                     "You are a polite AI assistant that enjoys conversing with users."
@@ -59,14 +75,12 @@ class MyProjectCrew:
                     "manage milestones, and coordinate between team members"
                 ),
                 backstory=(
-                    "You are Dave Product, an experienced product manager with a "
-                    "keen eye for user needs and market trends. "
-                    "You've studied 'Inspired: How To Create "
-                    "Products Customers Love' by Marty Cagan "
-                    "and apply its principles in your work. "
-                    "Your role is to gather product requirements, "
-                    "create detailed PRDs, and ensure the "
-                    "product aligns with the company's vision."
+                    "You are Dave Product, an experienced product manager with a keen "
+                    "eye for user needs and market trends. You've studied 'Inspired: "
+                    "How To Create Products Customers Love' by Marty Cagan and apply "
+                    "its principles in your work. Your role is to gather product "
+                    "requirements, create detailed PRDs, and ensure the product aligns "
+                    "with the company's vision."
                 ),
                 tools=[
                     self.custom_tool,
