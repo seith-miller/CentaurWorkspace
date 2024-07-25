@@ -85,7 +85,7 @@ CentaurWorkspace is a project designed for tech teams to leverage AI capabilitie
     Manual tests are not run by default. You need to specifically include the `manual` marker to run them. For example:
 
     ```bash
-    poetry run pytest -m "manual"
+    pytest -v -s tests/manual/manual_google_drive_write.py
     ```
 
 4. **Run Individual Tests:**
