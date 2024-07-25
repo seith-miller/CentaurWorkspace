@@ -37,46 +37,146 @@ This is a simple "Hello World" style project using CrewAI.
 1. Install dependencies:
 
 <<ENDFILE>>
-<<DIR:.pytest_cache>>
-<<FILE:.pytest_cache/README.md>>
-# pytest cache directory #
-
-This directory contains data from the pytest's cache plugin,
-which provides the `--lf` and `--ff` options, as well as the `cache` fixture.
-
-**Do not** commit this to version control.
-
-See [the docs](https://docs.pytest.org/en/stable/how-to/cache.html) for more information.
+<<DIR:tests>>
+<<FILE:tests/__init__.py>>
+# This file was left blank on purpose
 
 <<ENDFILE>>
-<<DIR:.pytest_cache/v>>
-<<DIR:.pytest_cache/v/cache>>
-<<DIR:tests>>
 <<DIR:tests/unit>>
 <<FILE:tests/unit/test_code_writing_tool.py>>
 import pytest
-import pytest_asyncio
+from unittest.mock import patch, MagicMock, AsyncMock
 from centaur_workspace.tools.code_writing_tool import CodeWritingTool
 
-pytestmark = pytest.mark.asyncio
 
-def test_code_writing_tool_initialization():
+@pytest.fixture
+def mock_openai():
+    with patch("centaur_workspace.tools.code_writing_tool.OpenAI") as mock_sync, patch(
+        "centaur_workspace.tools.code_writing_tool.AsyncOpenAI"
+    ) as mock_async:
+        mock_sync_instance = MagicMock()
+        mock_async_instance = AsyncMock()
+        mock_sync.return_value = mock_sync_instance
+        mock_async.return_value = mock_async_instance
+        yield mock_sync_instance, mock_async_instance
+
+
+def test_code_writing_tool_initialization(mock_openai):
     tool = CodeWritingTool()
     assert tool.name == "Code Writing Tool"
-    assert "assists in writing Python code" in tool.description
+    assert "generates Python code" in tool.description
 
-def test_code_writing_tool_run():
+
+def test_code_writing_tool_run(mock_openai):
+    mock_sync, _ = mock_openai
     tool = CodeWritingTool()
-    result = tool._run("calculate fibonacci")
-    assert "def solve_calculate_fibonacci():" in result
-    assert "# TODO: Implement calculate fibonacci" in result
+    mock_sync.chat.completions.create.return_value.choices[
+        0
+    ].message.content = "def example_function():\n    pass"
+    result = tool._run("create an example function")
+    assert "def example_function():" in result
+    assert "pass" in result
+
 
 @pytest.mark.asyncio
-async def test_code_writing_tool_arun():
+async def test_code_writing_tool_arun(mock_openai):
+    _, mock_async = mock_openai
     tool = CodeWritingTool()
-    result = await tool._arun("sort list")
-    assert "def solve_sort_list():" in result
-    assert "# TODO: Implement sort list" in result
+    mock_async.chat.completions.create.return_value.choices[
+        0
+    ].message.content = "async def async_function():\n    pass"
+    result = await tool._arun("create an async function")
+    assert "async def async_function():" in result
+    assert "pass" in result
+
+
+def test_code_writing_tool_run_empty_task(mock_openai):
+    tool = CodeWritingTool()
+    with pytest.raises(ValueError, match="Task cannot be empty."):
+        tool._run("")
+
+
+@pytest.mark.asyncio
+async def test_code_writing_tool_arun_empty_task(mock_openai):
+    tool = CodeWritingTool()
+    with pytest.raises(ValueError, match="Task cannot be empty."):
+        await tool._arun("")
+
+
+def test_code_writing_tool_run_no_response(mock_openai):
+    mock_sync, _ = mock_openai
+    tool = CodeWritingTool()
+    mock_sync.chat.completions.create.return_value.choices = []
+    result = tool._run("create an example function")
+    assert "An error occurred" in result
+    assert "No response generated" in result
+
+
+@pytest.mark.asyncio
+async def test_code_writing_tool_arun_no_response(mock_openai):
+    _, mock_async = mock_openai
+    tool = CodeWritingTool()
+    mock_async.chat.completions.create.return_value.choices = []
+    result = await tool._arun("create an example function")
+    assert "An error occurred" in result
+    assert "No response generated" in result
+
+<<ENDFILE>>
+<<FILE:tests/unit/__init__.py>>
+# This file was left blank on purpose
+
+<<ENDFILE>>
+<<FILE:tests/unit/test_google_drive_tool.py>>
+import pytest
+from centaur_workspace.tools import google_drive_tool as gd_tool
+
+@pytest.mark.integration
+class TestGoogleDriveTools:
+    @pytest.fixture(scope="class")
+    def tools(self):
+        return {
+            "list": gd_tool.GoogleDriveListTool(),
+            "read": gd_tool.GoogleDriveReadTool(),
+            "write": gd_tool.GoogleDriveWriteTool()
+        }
+
+    def test_list_files(self, tools):
+        result = tools["list"]._run()
+        assert isinstance(result, str)
+        if "An error occurred: Invalid or missing credentials" in result:
+            pytest.skip("Authentication failed. Please run the authentication script.")
+        else:
+            assert "No files found" in result or "(" in result
+
+    def test_read_and_write_file(self, tools):
+        # List files and get the first Google Doc ID
+        files_list = tools["list"]._run()
+        file_id = next((line.split('(')[1].split(')')[0] for line in files_list.split('\n')
+                        if 'application/vnd.google-apps.document' in line), None)
+
+        if not file_id:
+            pytest.skip("No Google Doc found to test read/write operations")
+
+        # Read initial content
+        initial_content = tools["read"]._run(file_id)
+        assert isinstance(initial_content, str)
+
+        # Write new content
+        new_content = "Test content written by GoogleDriveWriteTool"
+        write_result = tools["write"]._run(file_id, new_content)
+        assert "Content written to file" in write_result
+
+        # Read updated content
+        updated_content = tools["read"]._run(file_id)
+        assert new_content in updated_content
+
+        # Restore original content
+        tools["write"]._run(file_id, initial_content)
+
+@pytest.mark.skip(reason="Manual test script")
+def test_manual():
+    # Your original manual test code here
+    pass
 
 <<ENDFILE>>
 <<FILE:tests/unit/test_custom_tool.py>>
@@ -95,122 +195,158 @@ def test_custom_tool():
 
 <<ENDFILE>>
 <<DIR:tests/unit/__pycache__>>
-<<DIR:db>>
-<<DIR:.git>>
-<<DIR:.git/objects>>
-<<DIR:.git/objects/92>>
-<<DIR:.git/objects/03>>
-<<DIR:.git/objects/9e>>
-<<DIR:.git/objects/32>>
-<<DIR:.git/objects/3c>>
-<<DIR:.git/objects/51>>
-<<DIR:.git/objects/3d>>
-<<DIR:.git/objects/0b>>
-<<DIR:.git/objects/93>>
-<<DIR:.git/objects/5f>>
-<<DIR:.git/objects/a4>>
-<<DIR:.git/objects/ad>>
-<<DIR:.git/objects/bd>>
-<<DIR:.git/objects/d1>>
-<<DIR:.git/objects/ae>>
-<<DIR:.git/objects/d8>>
-<<DIR:.git/objects/e5>>
-<<DIR:.git/objects/c0>>
-<<DIR:.git/objects/f5>>
-<<DIR:.git/objects/e3>>
-<<DIR:.git/objects/cf>>
-<<DIR:.git/objects/ed>>
-<<DIR:.git/objects/c6>>
-<<DIR:.git/objects/4b>>
-<<DIR:.git/objects/pack>>
-<<DIR:.git/objects/7d>>
-<<DIR:.git/objects/29>>
-<<DIR:.git/objects/42>>
-<<DIR:.git/objects/7b>>
-<<DIR:.git/objects/8a>>
-<<DIR:.git/objects/7e>>
-<<DIR:.git/objects/43>>
-<<DIR:.git/objects/9f>>
-<<DIR:.git/objects/6b>>
-<<DIR:.git/objects/00>>
-<<DIR:.git/objects/info>>
-<<DIR:.git/objects/3a>>
-<<DIR:.git/objects/5e>>
-<<DIR:.git/objects/5b>>
-<<DIR:.git/objects/37>>
-<<DIR:.git/objects/39>>
-<<DIR:.git/objects/64>>
-<<DIR:.git/objects/a0>>
-<<DIR:.git/objects/db>>
-<<DIR:.git/objects/a8>>
-<<DIR:.git/objects/a6>>
-<<DIR:.git/objects/b9>>
-<<DIR:.git/objects/c4>>
-<<DIR:.git/objects/e1>>
-<<DIR:.git/objects/cd>>
-<<DIR:.git/objects/c2>>
-<<DIR:.git/objects/f6>>
-<<DIR:.git/objects/cb>>
-<<DIR:.git/objects/41>>
-<<DIR:.git/objects/8d>>
-<<DIR:.git/objects/15>>
-<<DIR:.git/objects/12>>
-<<DIR:.git/objects/8c>>
-<<DIR:.git/objects/1d>>
-<<DIR:.git/objects/1c>>
-<<DIR:.git/objects/82>>
-<<DIR:.git/objects/49>>
-<<DIR:.git/objects/78>>
-<<DIR:.git/objects/22>>
-<<DIR:.git/info>>
-<<DIR:.git/logs>>
-<<DIR:.git/logs/refs>>
-<<DIR:.git/logs/refs/heads>>
-<<DIR:.git/logs/refs/remotes>>
-<<DIR:.git/logs/refs/remotes/origin>>
-<<DIR:.git/hooks>>
-<<DIR:.git/refs>>
-<<DIR:.git/refs/heads>>
-<<DIR:.git/refs/tags>>
-<<DIR:.git/refs/remotes>>
-<<DIR:.git/refs/remotes/origin>>
-<<DIR:src>>
-<<DIR:src/centaur_workspace>>
-<<FILE:src/centaur_workspace/__init__.py>>
+<<DIR:tests/integration>>
+<<FILE:tests/integration/test_code_writing_tool_integration.py>>
+import pytest
+import asyncio
+from centaur_workspace.tools.code_writing_tool import CodeWritingTool
+
+
+@pytest.mark.asyncio
+async def test_factorial_integration():
+    tool = CodeWritingTool()
+
+    # Generate factorial code
+    code = await tool._arun("write a function to calculate factorial")
+
+    # Execute the generated code
+    exec(code, globals())
+
+    # Test the factorial function
+    assert "factorial" in globals(), "Factorial function not defined"
+    assert factorial(0) == 1  # noqa: F821
+    assert factorial(5) == 120  # noqa: F821
+
+
+@pytest.mark.asyncio
+async def test_prime_numbers_integration():
+    tool = CodeWritingTool()
+
+    # Generate prime numbers code
+    code = await tool._arun("write a function to find prime numbers up to n")
+
+    # Execute the generated code
+    exec(code, globals())
+
+    # Test the prime numbers function
+    assert "find_primes" in globals(), "find_primes function not defined"
+    primes = find_primes(20)  # noqa: F821
+    assert primes == [2, 3, 5, 7, 11, 13, 17, 19], "Incorrect prime numbers generated"
+
+
+if __name__ == "__main__":
+    asyncio.run(test_factorial_integration())
+    asyncio.run(test_sort_list_integration())  # noqa: F821
+    asyncio.run(test_prime_numbers_integration())
+
+<<ENDFILE>>
+<<FILE:tests/integration/__init__.py>>
+# This file was left blank on purpose
+
+<<ENDFILE>>
+<<FILE:tests/integration/test_google_drive_tool.py>>
+import unittest
+import os
+from src.centaur_workspace.tools.google_drive_tool import GoogleDriveListTool, GoogleDriveReadTool, GoogleDriveWriteTool
+
+class TestGoogleDriveTools(unittest.TestCase):
+
+    def setUp(self):
+        self.list_tool = GoogleDriveListTool()
+        self.read_tool = GoogleDriveReadTool()
+        self.write_tool = GoogleDriveWriteTool()
+
+    def test_list_files(self):
+        result = self.list_tool._run()
+        print(f"List result: {result}")  # Add this line for debugging
+        self.assertIsInstance(result, str)
+        self.assertNotIn("An error occurred", result)
+
+    def test_read_file(self):
+        list_result = self.list_tool._run()
+        print(f"List result: {list_result}")  # Add this line for debugging
+        if "An error occurred" in list_result:
+            self.skipTest("Skipping due to list error")
+        file_id = list_result.split('\n')[0].split('(')[1].split(')')[0]
+
+        read_result = self.read_tool._run(file_id)
+        self.assertIsInstance(read_result, str)
+        self.assertNotIn("An error occurred", read_result)
+
+    def test_write_file(self):
+        list_result = self.list_tool._run()
+        print(f"List result: {list_result}")  # Add this line for debugging
+        if "An error occurred" in list_result:
+            self.skipTest("Skipping due to list error")
+        try:
+            file_id = next(line.split('(')[1].split(')')[0] for line in list_result.split('\n') if 'application/vnd.google-apps.document' in line)
+        except StopIteration:
+            self.skipTest("No Google Docs found to write to")
+
+        write_content = "Test content written by integration test."
+        write_result = self.write_tool._run(file_id, write_content)
+        self.assertIsInstance(write_result, str)
+        self.assertIn("Content written to file", write_result)
+
+if __name__ == '__main__':
+    unittest.main()
+
+<<ENDFILE>>
+<<DIR:tests/integration/__pycache__>>
+<<DIR:tests/__pycache__>>
+<<DIR:centaur_workspace>>
+<<FILE:centaur_workspace/__init__.py>>
 # This file is intentionally left empty to mark the directory as a Python package.
 
 <<ENDFILE>>
-<<FILE:src/centaur_workspace/crew.py>>
+<<FILE:centaur_workspace/crew.py>>
 from crewai import Agent, Crew, Task
-
 from .tools.custom_tool import CustomTool
-
+from .tools.google_drive_tool import GoogleDriveListTool, GoogleDriveReadTool, GoogleDriveWriteTool
 
 class MyProjectCrew:
     def __init__(self):
         self.custom_tool = CustomTool()
+        self.google_drive_list_tool = GoogleDriveListTool()
+        self.google_drive_read_tool = GoogleDriveReadTool()
+        self.google_drive_write_tool = GoogleDriveWriteTool()
         self.agents = self.create_agents()
+        self.dave_conversation = []
 
     def create_agents(self):
         return [
             Agent(
                 role="Greeter",
                 goal="Greet the user warmly",
-                backstory=(
-                    "You are an enthusiastic AI assistant eager to welcome " "users."
-                ),
+                backstory="You are an enthusiastic AI assistant eager to welcome users.",
                 tools=[self.custom_tool],
                 verbose=True,
             ),
             Agent(
                 role="Responder",
-                goal="Respond to the user greeting and engage in a pleasant "
-                "conversation.",
-                backstory=(
-                    "You are a polite AI assistant that enjoys conversing with "
-                    "users."
-                ),
+                goal="Respond to the user greeting and engage in a pleasant conversation.",
+                backstory="You are a polite AI assistant that enjoys conversing with users.",
                 tools=[self.custom_tool],
+                verbose=True,
+            ),
+            Agent(
+                role="Product Manager",
+                goal="Oversee the project, ensure alignment with the product vision, manage milestones, and coordinate between team members",
+                backstory=(
+                    "You are Dave Product, an experienced product manager with "
+                    "a keen eye for user needs and market trends. You've "
+                    "studied 'Inspired: How To Create Products Customers Love' "
+                    "by Marty Cagan and apply its principles in your work. "
+                    "Your role is to gather product requirements, create "
+                    "detailed PRDs, and ensure the product aligns with the "
+                    "company's vision."
+                ),
+                tools=[
+                    self.custom_tool,
+                    self.google_drive_list_tool,
+                    self.google_drive_read_tool,
+                    self.google_drive_write_tool
+                ],
                 verbose=True,
             ),
         ]
@@ -224,12 +360,33 @@ class MyProjectCrew:
         crew = Crew(agents=self.agents, tasks=[task], verbose=2)
         return crew.kickoff()
 
+    def interact_with_product_manager(self, user_input):
+        self.dave_conversation.append(f"User: {user_input}")
+
+        task = Task(
+            description=(
+                f"As the Product Manager, respond to: {user_input}\n\n"
+                f"Conversation history:\n{self._format_conversation()}"
+            ),
+            expected_output=(
+                "A thoughtful response addressing the product-related query "
+                "or instruction, maintaining context of the conversation"
+            ),
+            agent=self.agents[-1],
+        )
+        crew = Crew(agents=[self.agents[-1]], tasks=[task], verbose=2)
+        response = crew.kickoff()
+
+        self.dave_conversation.append(f"Dave (Product): {response}")
+        return response
+
+    def _format_conversation(self):
+        return "\n".join(self.dave_conversation)
+
 <<ENDFILE>>
-<<FILE:src/centaur_workspace/main.py>>
+<<FILE:centaur_workspace/main.py>>
 import os
-
 from dotenv import load_dotenv
-
 from centaur_workspace.crew import MyProjectCrew
 
 
@@ -242,11 +399,43 @@ def main():
 
     crew = MyProjectCrew()
 
+    print(
+        "Welcome! You can chat with our AI assistants or interact with Dave "
+        "Product, our Product Manager."
+    )
+    print(
+        "Type 'Dave' to talk to Dave Product, 'exit' to quit, or anything "
+        "else to chat with our general AI."
+    )
+
+    talking_to_dave = False
+
     while True:
-        user_input = input("You: ")
-        if user_input.lower() in ["exit", "quit"]:
-            break
-        response = crew.chat(user_input)
+        if not talking_to_dave:
+            user_input = input("You: ")
+            if user_input.lower() == "exit":
+                break
+            elif user_input.lower() == "dave":
+                talking_to_dave = True
+                print(
+                    "You're now talking to Dave Product. What would you like "
+                    "to discuss about the product? (Type 'stop' to end the "
+                    "conversation with Dave)"
+                )
+                continue
+            else:
+                response = crew.chat(user_input)
+        else:
+            user_input = input("You (to Dave): ")
+            if user_input.lower() == "stop":
+                talking_to_dave = False
+                print(
+                    "You've ended your conversation with Dave. You can type "
+                    "'Dave' again to talk to him later."
+                )
+                continue
+            response = crew.interact_with_product_manager(user_input)
+
         print(f"AI: {response}")
 
 
@@ -254,33 +443,108 @@ if __name__ == "__main__":
     main()
 
 <<ENDFILE>>
-<<DIR:src/centaur_workspace/tools>>
-<<FILE:src/centaur_workspace/tools/__init__.py>>
+<<DIR:centaur_workspace/tools>>
+<<FILE:centaur_workspace/tools/__init__.py>>
 # This file is intentionally left empty to mark the directory as a Python package.
 
 <<ENDFILE>>
-<<FILE:src/centaur_workspace/tools/code_writing_tool.py>>
+<<FILE:centaur_workspace/tools/code_writing_tool.py>>
 from crewai_tools import BaseTool
+from openai import OpenAI, AsyncOpenAI
+import os
+from dotenv import load_dotenv
+from pydantic import PrivateAttr
+from openai.types.chat import ChatCompletionMessageParam
+
 
 class CodeWritingTool(BaseTool):
     name: str = "Code Writing Tool"
-    description: str = "A tool that assists in writing Python code."
+    description: str = "A tool that generates Python code using an LLM."
+    _sync_client: OpenAI = PrivateAttr()
+    _async_client: AsyncOpenAI = PrivateAttr()
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        load_dotenv()
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is not set.")
+        self._sync_client = OpenAI(api_key=api_key)
+        self._async_client = AsyncOpenAI(api_key=api_key)
+
+    def _generate_messages(self, task: str) -> list[ChatCompletionMessageParam]:
+        return [
+            {
+                "role": "system",
+                "content": (
+                    "You are a skilled Python programmer. Generate concise, "
+                    "working Python code based on the given task. Do not include "
+                    "any markdown formatting or code block indicators."
+                ),
+            },
+            {
+                "role": "user",
+                "content": f"Write Python code to {task}. Provide only the code "
+                "without any explanations or markup.",
+            },
+        ]
 
     def _run(self, task: str) -> str:
-        # This is a simple implementation. In a real scenario,
-        # this would interface with an LLM for code generation.
-        return f"""
-        def solve_{task.lower().replace(' ', '_')}():
-            # TODO: Implement {task}
-            pass
-        """
+        if not task:
+            raise ValueError("Task cannot be empty.")
+
+        try:
+            response = self._sync_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=self._generate_messages(task),
+                max_tokens=500,
+                n=1,
+                temperature=0.7,
+            )
+
+            if not response.choices:
+                raise ValueError("No response generated from the language model.")
+
+            code = response.choices[0].message.content.strip()
+            if not code:
+                raise ValueError("Generated code is empty.")
+
+            return code
+
+        except Exception as e:
+            error_message = f"An error occurred while generating code: {str(e)}"
+            print(f"Error in CodeWritingTool: {error_message}")
+            return error_message
 
     async def _arun(self, task: str) -> str:
-        # Async implementation
-        return self._run(task)
+        if not task:
+            raise ValueError("Task cannot be empty.")
+
+        try:
+            response = await self._async_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=self._generate_messages(task),
+                max_tokens=500,
+                n=1,
+                temperature=0.7,
+            )
+
+            if not response.choices:
+                raise ValueError("No response generated from the language model.")
+
+            code = response.choices[0].message.content.strip()
+            if not code:
+                raise ValueError("Generated code is empty.")
+
+            return code
+
+        except Exception as e:
+            error_message = f"An error occurred while generating code: {str(e)}"
+            print(f"Error in CodeWritingTool: {error_message}")
+            return error_message
 
 <<ENDFILE>>
-<<FILE:src/centaur_workspace/tools/custom_tool.py>>
+<<FILE:centaur_workspace/tools/custom_tool.py>>
 from crewai_tools.tools import RagTool
 
 
@@ -292,9 +556,124 @@ class CustomTool(RagTool):
         return f"Hello, {name}! Welcome to our CrewAI project."
 
 <<ENDFILE>>
-<<DIR:src/centaur_workspace/tools/__pycache__>>
-<<DIR:src/centaur_workspace/config>>
-<<FILE:src/centaur_workspace/config/agents.yaml>>
+<<FILE:centaur_workspace/tools/google_drive_tool.py>>
+import io
+import os
+import pickle
+from crewai_tools import BaseTool
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
+from google.auth.transport.requests import Request
+
+
+SCOPES = ["https://www.googleapis.com/auth/drive"]
+
+
+class GoogleDriveBaseTool(BaseTool):
+    def _get_credentials(self):
+        creds = None
+        token_path = "token.pickle"
+        credentials_path = 'credentials.json'
+
+        if os.path.exists(token_path):
+            with open(token_path, "rb") as token:
+                creds = pickle.load(token)
+
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(credentials_path, SCOPES)
+                creds = flow.run_local_server(port=0)
+            with open(token_path, "wb") as token:
+                pickle.dump(creds, token)
+
+        return creds
+
+class GoogleDriveListTool(GoogleDriveBaseTool):
+    name: str = "Google Drive List Tool"
+    description: str = "Lists files in your Google Drive."
+
+    def _run(self) -> str:
+        try:
+            creds = self._get_credentials()
+            service = build('drive', 'v3', credentials=creds)
+            results = service.files().list(pageSize=10, fields="nextPageToken, files(id, name, mimeType)").execute()
+            items = results.get('files', [])
+            if not items:
+                return 'No files found.'
+            return '\n'.join([f"{item['name']} ({item['id']}) - {item['mimeType']}" for item in items])
+        except Exception as e:
+            return f"An error occurred: {str(e)}"
+
+class GoogleDriveReadTool(GoogleDriveBaseTool):
+    name: str = "Google Drive Read Tool"
+    description: str = "Reads the content of a specific file in your Google Drive. Provide the file_id as input."
+
+    def _run(self, file_id: str) -> str:
+        try:
+            creds = self._get_credentials()
+            service = build('drive', 'v3', credentials=creds)
+            file = service.files().get(fileId=file_id, fields='mimeType').execute()
+            mime_type = file['mimeType']
+
+            if mime_type == 'application/vnd.google-apps.document':
+                docs_service = build('docs', 'v1', credentials=creds)
+                doc = docs_service.documents().get(documentId=file_id).execute()
+                return self._extract_text_from_doc(doc)
+            else:
+                request = service.files().get_media(fileId=file_id)
+                fh = io.BytesIO()
+                downloader = MediaIoBaseDownload(fh, request)
+                done = False
+                while done is False:
+                    status, done = downloader.next_chunk()
+                return fh.getvalue().decode('utf-8')
+        except Exception as e:
+            return f"An error occurred while reading the file: {str(e)}"
+
+    def _extract_text_from_doc(self, doc):
+        text = []
+        for elem in doc.get('body', {}).get('content', []):
+            if 'paragraph' in elem:
+                for para_elem in elem['paragraph'].get('elements', []):
+                    if 'textRun' in para_elem:
+                        text.append(para_elem['textRun']['content'])
+        return ''.join(text)
+
+class GoogleDriveWriteTool(GoogleDriveBaseTool):
+    name: str = "Google Drive Write Tool"
+    description: str = "Writes content to a specific file in your Google Drive. Provide the file_id and content as input."
+
+    def _run(self, file_id: str, content: str) -> str:
+        try:
+            creds = self._get_credentials()
+            service = build('drive', 'v3', credentials=creds)
+            file = service.files().get(fileId=file_id, fields='mimeType').execute()
+            mime_type = file['mimeType']
+
+            if mime_type == 'application/vnd.google-apps.document':
+                docs_service = build('docs', 'v1', credentials=creds)
+                requests = [
+                    {
+                        'insertText': {
+                            'location': {'index': 1},
+                            'text': content
+                        }
+                    }
+                ]
+                docs_service.documents().batchUpdate(documentId=file_id, body={'requests': requests}).execute()
+                return f"Content written to file {file_id}"
+            else:
+                return "Writing to this file type is not supported."
+        except Exception as e:
+            return f"An error occurred while writing to the file: {str(e)}"
+
+<<ENDFILE>>
+<<DIR:centaur_workspace/tools/__pycache__>>
+<<DIR:centaur_workspace/config>>
+<<FILE:centaur_workspace/config/agents.yaml>>
 greeter:
     role: Greeter
     goal: Greet the user warmly
@@ -308,7 +687,7 @@ responder:
         You are a polite AI assistant that engages in pleasant conversation.
 
 <<ENDFILE>>
-<<FILE:src/centaur_workspace/config/tasks.yaml>>
+<<FILE:centaur_workspace/config/tasks.yaml>>
 greet_user:
     description: Greet the user with a warm welcome message.
     agent: greeter
@@ -318,4 +697,155 @@ respond_to_user:
     agent: responder
 
 <<ENDFILE>>
-<<DIR:src/centaur_workspace/__pycache__>>
+<<DIR:centaur_workspace/__pycache__>>
+<<DIR:scripts>>
+<<DIR:scripts/manual_tests>>
+<<FILE:scripts/manual_tests/manual_test_code_writing_tool.py>>
+from centaur_workspace.tools.code_writing_tool import CodeWritingTool
+import asyncio
+from dotenv import load_dotenv
+
+
+async def main():
+    load_dotenv()
+
+    tool = CodeWritingTool()
+
+    print("Testing synchronous run (Calculate factorial):")
+    result = tool._run("calculate factorial")
+    print(result)
+    print("\n" + "-" * 50 + "\n")
+
+    print("Testing asynchronous run (Sort a list):")
+    result = await tool._arun("sort a list")
+    print(result)
+    print("\n" + "-" * 50 + "\n")
+
+    print("Testing another case (Find prime numbers):")
+    result = await tool._arun("find prime numbers up to n")
+    print(result)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+<<ENDFILE>>
+<<FILE:scripts/manual_tests/auth_google.py>>
+import os
+import pickle
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+
+SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+
+def authenticate():
+    creds = None
+    token_path = "token.pickle"
+    credentials_path = 'credentials.json'
+
+    if os.path.exists(token_path):
+        with open(token_path, "rb") as token:
+            creds = pickle.load(token)
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(credentials_path, SCOPES)
+            creds = flow.run_local_server(port=0)
+        with open(token_path, "wb") as token:
+            pickle.dump(creds, token)
+
+    print("Authentication successful. Token saved to 'token.pickle'.")
+
+if __name__ == '__main__':
+    authenticate()
+
+<<ENDFILE>>
+<<FILE:scripts/manual_tests/manual_test_google_read_file.py>>
+import os
+import pickle
+import google.auth.transport.requests
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+
+# Update SCOPES to include both Drive and Docs scopes
+SCOPES = [
+    'https://www.googleapis.com/auth/drive.metadata.readonly',
+    'https://www.googleapis.com/auth/documents.readonly'
+]
+
+def get_credentials():
+    creds = None
+    token_path = "token.pickle"
+    credentials_path = 'credentials.json'
+
+    if not os.path.exists(credentials_path):
+        raise ValueError(f"{credentials_path} file is not found.")
+
+    if os.path.exists(token_path):
+        with open(token_path, "rb") as token:
+            creds = pickle.load(token)
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(google.auth.transport.requests.Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(credentials_path, SCOPES)
+            creds = flow.run_local_server(port=0)
+        with open(token_path, "wb") as token:
+            pickle.dump(creds, token)
+
+    return creds
+
+def list_files():
+    creds = get_credentials()
+    service = build('drive', 'v3', credentials=creds)
+
+    # List files
+    results = service.files().list(pageSize=10, fields="nextPageToken, files(id, name, mimeType)").execute()
+    items = results.get('files', [])
+
+    if not items:
+        print('No files found.')
+        return None
+    else:
+        print('Files:')
+        for item in items:
+            print(f"{item['name']} ({item['id']}) - {item['mimeType']}")
+        # Return the ID of the first Google Doc file
+        for item in items:
+            if item['mimeType'] == 'application/vnd.google-apps.document':
+                return item['id']
+        return None
+
+def read_file(file_id):
+    creds = get_credentials()
+    service = build('drive', 'v3', credentials=creds)
+
+    try:
+        file = service.files().get(fileId=file_id).execute()
+        print(f"Reading file: {file['name']} ({file['id']})")
+
+        docs_service = build("docs", "v1", credentials=creds)
+        doc = docs_service.documents().get(documentId=file_id).execute()
+        content = ''
+        for elem in doc.get("body").get("content"):
+            if "paragraph" in elem:
+                for para_elem in elem["paragraph"]["elements"]:
+                    if "textRun" in para_elem:
+                        content += para_elem["textRun"]["content"]
+        print(content)
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+if __name__ == '__main__':
+    first_file_id = list_files()
+    if first_file_id:
+        read_file(first_file_id)
+    else:
+        print("No Google Doc files found.")
+
+<<ENDFILE>>
+<<DIR:db>>

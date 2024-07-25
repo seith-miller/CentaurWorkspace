@@ -1,7 +1,19 @@
+# cache
 __pycache__/
+.pytest_cache
+.pytest_cache/
 
+# env
 venv/
-
 src/centaur_workspace/venv/
 
+# db
+database
+
+# git
+.git/
+
+# Secrets
+credentials.json
 .env
+token.pickle
