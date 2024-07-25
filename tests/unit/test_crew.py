@@ -22,13 +22,13 @@ class TestAgent:
 class TestMyProjectCrew:
     @patch("centaur_workspace.crew.Agent")
     def test_create_agents(self, MockAgent):
-        mock_agents = [MagicMock(), MagicMock(), MagicMock()]
+        mock_agents = [MagicMock(), MagicMock(), MagicMock(), MagicMock()]
         MockAgent.side_effect = mock_agents
 
         crew = MyProjectCrew()
-        assert len(crew.agents) == 3
-        for i, call in enumerate(MockAgent.call_args_list):
-            assert call.kwargs["llm_provider"] in ["openai", "anthropic", "openai"]
+        assert len(crew.agents) == 4
+        for call in MockAgent.call_args_list:
+            assert call.kwargs["llm_provider"] in ["openai", "anthropic"]
 
     @patch("centaur_workspace.crew.Agent")
     @patch("centaur_workspace.crew.Task")

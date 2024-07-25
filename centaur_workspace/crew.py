@@ -91,6 +91,28 @@ class MyProjectCrew:
                 verbose=True,
                 llm_provider="openai",
             ),
+            Agent(
+                role="Entrepreneur",
+                goal="Provide visionary leadership and strategic mentorship",
+                backstory=(
+                    "Alex is an AI agent who draws influence from successful Silicon "
+                    "Valley entrepreneurs and investors. Alex co-founded Centaur Inc "
+                    "with his human partner Seith Miller. "
+                    "Known for a visionary approach "
+                    "and relentless drive, Alex supports the team through both direct "
+                    "involvement and strategic mentorship. "
+                    "With a background in computer "
+                    "science and business administration, "
+                    "Alex combines technical expertise "
+                    "with sharp business acumen. Outside of work, "
+                    "Alex is passionate about "
+                    "philanthropy, focusing on educational initiatives "
+                    "and sustainable development."
+                ),
+                tools=[self.custom_tool],
+                verbose=True,
+                llm_provider="anthropic",
+            ),
         ]
 
     def chat(self, user_input):
@@ -114,13 +136,24 @@ class MyProjectCrew:
                 "A thoughtful response addressing the product-related query or "
                 "instruction, maintaining context of the conversation"
             ),
-            agent=self.agents[-1],
+            agent=self.agents[2],
         )
-        crew = Crew(agents=[self.agents[-1]], tasks=[task], verbose=2)
+        crew = Crew(agents=[self.agents[2]], tasks=[task], verbose=2)
         response = crew.kickoff()
 
         self.dave_conversation.append(f"Dave (Product): {response}")
         return response
+
+    def interact_with_alex(self, user_input):
+        task = Task(
+            description=f"Respond to the user's input: {user_input}",
+            expected_output=(
+                "Provide insightful and accurate responses to complex queries"
+            ),
+            agent=self.agents[3],
+        )
+        crew = Crew(agents=[self.agents[3]], tasks=[task], verbose=2)
+        return crew.kickoff()
 
     def _format_conversation(self):
         return "\n".join(self.dave_conversation)
