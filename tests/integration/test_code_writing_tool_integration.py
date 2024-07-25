@@ -4,6 +4,7 @@ from centaur_workspace.tools.code_writing_tool import CodeWritingTool
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_factorial_integration():
     tool = CodeWritingTool()
 
@@ -20,6 +21,7 @@ async def test_factorial_integration():
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_prime_numbers_integration():
     tool = CodeWritingTool()
 
@@ -37,5 +39,4 @@ async def test_prime_numbers_integration():
 
 if __name__ == "__main__":
     asyncio.run(test_factorial_integration())
-    asyncio.run(test_sort_list_integration())  # noqa: F821
     asyncio.run(test_prime_numbers_integration())

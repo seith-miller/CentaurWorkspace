@@ -1,13 +1,19 @@
 from crewai import Agent, Crew, Task
 from .tools.custom_tool import CustomTool
-from .tools.google_drive_tool import GoogleDriveTool
+from .tools.google_drive_tool import (
+    GoogleDriveListTool,
+    GoogleDriveReadTool,
+    GoogleDriveWriteTool,
+)
 
 
 class MyProjectCrew:
     def __init__(self):
         self.custom_tool = CustomTool()
+        self.google_drive_list_tool = GoogleDriveListTool()
+        self.google_drive_read_tool = GoogleDriveReadTool()
+        self.google_drive_write_tool = GoogleDriveWriteTool()
         self.agents = self.create_agents()
-        self.google_drive_tool = GoogleDriveTool()
         self.dave_conversation = []
 
     def create_agents(self):
@@ -16,7 +22,7 @@ class MyProjectCrew:
                 role="Greeter",
                 goal="Greet the user warmly",
                 backstory=(
-                    "You are an enthusiastic AI assistant eager to welcome " "users."
+                    "You are an enthusiastic AI assistant eager to welcome users."
                 ),
                 tools=[self.custom_tool],
                 verbose=True,
@@ -24,12 +30,11 @@ class MyProjectCrew:
             Agent(
                 role="Responder",
                 goal=(
-                    "Respond to the user greeting and engage in a pleasant "
-                    "conversation."
+                    "Respond to the user greeting and "
+                    "engage in a pleasant conversation."
                 ),
                 backstory=(
-                    "You are a polite AI assistant that enjoys conversing with "
-                    "users."
+                    "You are a polite AI assistant that enjoys conversing with users."
                 ),
                 tools=[self.custom_tool],
                 verbose=True,
@@ -37,9 +42,8 @@ class MyProjectCrew:
             Agent(
                 role="Product Manager",
                 goal=(
-                    "Oversee the project, ensure alignment with the product "
-                    "vision, manage milestones, and coordinate between team "
-                    "members"
+                    "Oversee the project, ensure alignment with the product vision, "
+                    "manage milestones, and coordinate between team members"
                 ),
                 backstory=(
                     "You are Dave Product, an experienced product manager with "
@@ -50,7 +54,12 @@ class MyProjectCrew:
                     "detailed PRDs, and ensure the product aligns with the "
                     "company's vision."
                 ),
-                tools=[self.custom_tool, self.google_drive_tool],
+                tools=[
+                    self.custom_tool,
+                    self.google_drive_list_tool,
+                    self.google_drive_read_tool,
+                    self.google_drive_write_tool,
+                ],
                 verbose=True,
             ),
         ]
@@ -58,7 +67,7 @@ class MyProjectCrew:
     def chat(self, user_input):
         task = Task(
             description=f"Respond to the user's input: {user_input}",
-            expected_output=("A friendly and engaging response to the user's input"),
+            expected_output="A friendly and engaging response to the user's input",
             agent=self.agents[1],
         )
         crew = Crew(agents=self.agents, tasks=[task], verbose=2)
