@@ -20,7 +20,7 @@ token.pickle
 Thumbs.db
 
 # centaurpack
-.cpk
+*.cpk
 
 # notes
 TODO
