@@ -1,10 +1,21 @@
-from crewai import Agent, Crew, Task
+from crewai import Agent as CrewAIAgent, Crew, Task
 from .tools.custom_tool import CustomTool
 from .tools.google_drive_tool import (
     GoogleDriveListTool,
     GoogleDriveReadTool,
     GoogleDriveWriteTool,
 )
+from .llm_providers import get_llm_provider
+
+
+class Agent(CrewAIAgent):
+    def __init__(self, llm_provider: str = None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._llm_provider = get_llm_provider(llm_provider)
+
+    @property
+    def llm_provider(self):
+        return self._llm_provider
 
 
 class MyProjectCrew:
@@ -26,18 +37,20 @@ class MyProjectCrew:
                 ),
                 tools=[self.custom_tool],
                 verbose=True,
+                llm_provider="openai",
             ),
             Agent(
                 role="Responder",
                 goal=(
-                    "Respond to the user greeting and "
-                    "engage in a pleasant conversation."
+                    "Respond to the user greeting and engage in a "
+                    "pleasant conversation."
                 ),
                 backstory=(
                     "You are a polite AI assistant that enjoys conversing with users."
                 ),
                 tools=[self.custom_tool],
                 verbose=True,
+                llm_provider="anthropic",
             ),
             Agent(
                 role="Product Manager",
@@ -46,13 +59,14 @@ class MyProjectCrew:
                     "manage milestones, and coordinate between team members"
                 ),
                 backstory=(
-                    "You are Dave Product, an experienced product manager with "
-                    "a keen eye for user needs and market trends. You've "
-                    "studied 'Inspired: How To Create Products Customers Love' "
-                    "by Marty Cagan and apply its principles in your work. "
-                    "Your role is to gather product requirements, create "
-                    "detailed PRDs, and ensure the product aligns with the "
-                    "company's vision."
+                    "You are Dave Product, an experienced product manager with a "
+                    "keen eye for user needs and market trends. "
+                    "You've studied 'Inspired: How To Create "
+                    "Products Customers Love' by Marty Cagan "
+                    "and apply its principles in your work. "
+                    "Your role is to gather product requirements, "
+                    "create detailed PRDs, and ensure the "
+                    "product aligns with the company's vision."
                 ),
                 tools=[
                     self.custom_tool,
@@ -61,13 +75,14 @@ class MyProjectCrew:
                     self.google_drive_write_tool,
                 ],
                 verbose=True,
+                llm_provider="openai",
             ),
         ]
 
     def chat(self, user_input):
         task = Task(
             description=f"Respond to the user's input: {user_input}",
-            expected_output="A friendly and engaging response to the user's input",
+            expected_output=("A friendly and engaging response to the user's input"),
             agent=self.agents[1],
         )
         crew = Crew(agents=self.agents, tasks=[task], verbose=2)
@@ -82,8 +97,8 @@ class MyProjectCrew:
                 f"Conversation history:\n{self._format_conversation()}"
             ),
             expected_output=(
-                "A thoughtful response addressing the product-related query "
-                "or instruction, maintaining context of the conversation"
+                "A thoughtful response addressing the product-related query or "
+                "instruction, maintaining context of the conversation"
             ),
             agent=self.agents[-1],
         )
