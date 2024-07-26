@@ -12,6 +12,8 @@ class Agent(CrewAIAgent):
     def __init__(self, llm_provider: str = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._llm_provider = get_llm_provider(llm_provider)
+        # Add this line to keep track of the LLM provider
+        self._llm_name = llm_provider
 
     @property
     def llm_provider(self):
@@ -33,6 +35,9 @@ class Agent(CrewAIAgent):
             messages, max_tokens
         )
 
+    def get_llm_name(self) -> str:
+        return self._llm_name
+
 
 class MyProjectCrew:
     def __init__(self):
@@ -45,29 +50,6 @@ class MyProjectCrew:
 
     def create_agents(self):
         return [
-            Agent(
-                role="Greeter",
-                goal="Greet the user warmly",
-                backstory=(
-                    "You are an enthusiastic AI assistant eager to welcome users."
-                ),
-                tools=[self.custom_tool],
-                verbose=True,
-                llm_provider="openai",
-            ),
-            Agent(
-                role="Responder",
-                goal=(
-                    "Respond to the user greeting and engage in a pleasant "
-                    "conversation."
-                ),
-                backstory=(
-                    "You are a polite AI assistant that enjoys conversing with users."
-                ),
-                tools=[self.custom_tool],
-                verbose=True,
-                llm_provider="anthropic",
-            ),
             Agent(
                 role="Product Manager",
                 goal=(
@@ -106,23 +88,14 @@ class MyProjectCrew:
                     "Alex combines technical expertise "
                     "with sharp business acumen. Outside of work, "
                     "Alex is passionate about "
-                    "philanthropy, focusing on educational initiatives "
-                    "and sustainable development."
+                    "philanthropy, focusing on educational initiatives and sustainable "
+                    "development."
                 ),
                 tools=[self.custom_tool],
                 verbose=True,
                 llm_provider="anthropic",
             ),
         ]
-
-    def chat(self, user_input):
-        task = Task(
-            description=f"Respond to the user's input: {user_input}",
-            expected_output=("A friendly and engaging response to the user's input"),
-            agent=self.agents[1],
-        )
-        crew = Crew(agents=self.agents, tasks=[task], verbose=2)
-        return crew.kickoff()
 
     def interact_with_product_manager(self, user_input):
         self.dave_conversation.append(f"User: {user_input}")
@@ -136,9 +109,9 @@ class MyProjectCrew:
                 "A thoughtful response addressing the product-related query or "
                 "instruction, maintaining context of the conversation"
             ),
-            agent=self.agents[2],
+            agent=self.agents[0],
         )
-        crew = Crew(agents=[self.agents[2]], tasks=[task], verbose=2)
+        crew = Crew(agents=[self.agents[0]], tasks=[task], verbose=2)
         response = crew.kickoff()
 
         self.dave_conversation.append(f"Dave (Product): {response}")
@@ -150,10 +123,14 @@ class MyProjectCrew:
             expected_output=(
                 "Provide insightful and accurate responses to complex queries"
             ),
-            agent=self.agents[3],
+            agent=self.agents[1],
         )
-        crew = Crew(agents=[self.agents[3]], tasks=[task], verbose=2)
-        return crew.kickoff()
+        crew = Crew(agents=[self.agents[1]], tasks=[task], verbose=2)
+        response = crew.kickoff()
+        # Check if the input asks for the LLM being used
+        if "llm" in user_input.lower():
+            response += f"\nNote: I am running on {self.agents[1].get_llm_name()}."
+        return response
 
     def _format_conversation(self):
         return "\n".join(self.dave_conversation)

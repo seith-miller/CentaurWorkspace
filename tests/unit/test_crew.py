@@ -22,29 +22,13 @@ class TestAgent:
 class TestMyProjectCrew:
     @patch("centaur_workspace.crew.Agent")
     def test_create_agents(self, MockAgent):
-        mock_agents = [MagicMock(), MagicMock(), MagicMock(), MagicMock()]
+        mock_agents = [MagicMock(), MagicMock()]
         MockAgent.side_effect = mock_agents
 
         crew = MyProjectCrew()
-        assert len(crew.agents) == 4
+        assert len(crew.agents) == 2
         for call in MockAgent.call_args_list:
             assert call.kwargs["llm_provider"] in ["openai", "anthropic"]
-
-    @patch("centaur_workspace.crew.Agent")
-    @patch("centaur_workspace.crew.Task")
-    @patch("centaur_workspace.crew.Crew")
-    def test_chat(self, MockCrew, MockTask, MockAgent):
-        mock_crew_instance = MagicMock()
-        MockCrew.return_value = mock_crew_instance
-        mock_task_instance = MagicMock()
-        MockTask.return_value = mock_task_instance
-
-        crew = MyProjectCrew()
-        crew.chat("Hello")
-
-        MockTask.assert_called_once()
-        MockCrew.assert_called_once()
-        mock_crew_instance.kickoff.assert_called_once()
 
     @patch("centaur_workspace.crew.Agent")
     @patch("centaur_workspace.crew.Task")
