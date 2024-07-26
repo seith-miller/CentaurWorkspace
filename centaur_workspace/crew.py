@@ -6,6 +6,7 @@ from .tools.google_drive_tool import (
     GoogleDriveWriteTool,
 )
 from .llm_providers import get_llm_provider
+from .tools.timestamp_tool import TimestampTool
 
 
 class Agent(CrewAIAgent):
@@ -58,6 +59,7 @@ class MyProjectCrew:
         self.google_drive_list_tool = GoogleDriveListTool()
         self.google_drive_read_tool = GoogleDriveReadTool()
         self.google_drive_write_tool = GoogleDriveWriteTool()
+        self.timestamp_tool = TimestampTool()
         self.agents = self.create_agents()
         self.dave_conversation = []
 
@@ -82,6 +84,7 @@ class MyProjectCrew:
                     self.google_drive_list_tool,
                     self.google_drive_read_tool,
                     self.google_drive_write_tool,
+                    self.timestamp_tool,
                 ],
                 verbose=True,
                 llm_provider="openai",
@@ -106,6 +109,7 @@ class MyProjectCrew:
                     self.google_drive_list_tool,
                     self.google_drive_read_tool,
                     self.google_drive_write_tool,
+                    self.timestamp_tool,
                 ],
                 verbose=True,
                 llm_provider="anthropic",
