@@ -28,7 +28,7 @@ class TestAnthropicProvider:
         ) as MockAsyncAnthropic:
             provider = AnthropicProvider(api_key="test_key")
             assert provider.api_key == "test_key"
-            assert provider.model == "claude-3-sonnet-20240229"
+            assert provider.model == "claude-3-5-sonnet-20240620"
             MockAnthropic.assert_called_once_with(api_key="test_key")
             MockAsyncAnthropic.assert_called_once_with(api_key="test_key")
 

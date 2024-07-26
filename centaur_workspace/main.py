@@ -51,9 +51,9 @@ def main():
             continue
         else:
             if talking_to_dave:
-                response = crew.interact_with_product_manager(user_input)
+                response = crew.interact_with_dave_product_manager(user_input)
             elif talking_to_alex:
-                response = crew.interact_with_alex(user_input)
+                response = crew.interact_with_alex_entrepreneur(user_input)
 
         print(f"AI: {response}")
 

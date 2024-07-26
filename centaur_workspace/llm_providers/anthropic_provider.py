@@ -9,7 +9,7 @@ load_dotenv()
 
 
 class AnthropicProvider(BaseLLMProvider):
-    def __init__(self, api_key: str = None, model: str = "claude-3-sonnet-20240229"):
+    def __init__(self, api_key: str = None, model: str = "claude-3-5-sonnet-20240620"):
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
         if not self.api_key:
             raise ValueError("Anthropic API key is not set")
