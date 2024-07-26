@@ -1,10 +1,55 @@
-from crewai import Agent, Crew, Task
+from crewai import Agent as CrewAIAgent, Crew, Task
 from .tools.custom_tool import CustomTool
 from .tools.google_drive_tool import (
     GoogleDriveListTool,
     GoogleDriveReadTool,
     GoogleDriveWriteTool,
 )
+from .llm_providers import get_llm_provider
+
+
+class Agent(CrewAIAgent):
+    def __init__(self, llm_provider: str, model: str, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._llm_provider = get_llm_provider(llm_provider, model)
+        self._llm_name = f"{llm_provider}-{model}"
+
+    @property
+    def llm_provider(self):
+        return self._llm_provider
+
+    def get_llm_name(self) -> str:
+        return self._llm_name
+
+
+class Worker(Agent):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def report_llm(self) -> str:
+        return f"I'm running on {self.get_llm_name()}"
+
+
+class GenericTester(Agent):
+    def __init__(
+        self,
+        role: str,
+        goal: str,
+        backstory: str,
+        llm_provider: str,
+        model: str,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(
+            role=role,
+            goal=goal,
+            backstory=backstory,
+            llm_provider=llm_provider,
+            model=model,
+            *args,
+            **kwargs,
+        )
 
 
 class MyProjectCrew:
@@ -18,41 +63,19 @@ class MyProjectCrew:
 
     def create_agents(self):
         return [
-            Agent(
-                role="Greeter",
-                goal="Greet the user warmly",
-                backstory=(
-                    "You are an enthusiastic AI assistant eager to welcome users."
-                ),
-                tools=[self.custom_tool],
-                verbose=True,
-            ),
-            Agent(
-                role="Responder",
-                goal=(
-                    "Respond to the user greeting and "
-                    "engage in a pleasant conversation."
-                ),
-                backstory=(
-                    "You are a polite AI assistant that enjoys conversing with users."
-                ),
-                tools=[self.custom_tool],
-                verbose=True,
-            ),
-            Agent(
+            Worker(
                 role="Product Manager",
                 goal=(
                     "Oversee the project, ensure alignment with the product vision, "
                     "manage milestones, and coordinate between team members"
                 ),
                 backstory=(
-                    "You are Dave Product, an experienced product manager with "
-                    "a keen eye for user needs and market trends. You've "
-                    "studied 'Inspired: How To Create Products Customers Love' "
-                    "by Marty Cagan and apply its principles in your work. "
-                    "Your role is to gather product requirements, create "
-                    "detailed PRDs, and ensure the product aligns with the "
-                    "company's vision."
+                    "You are Dave Product, an experienced product manager with a "
+                    "keen eye for user needs and market trends. You've studied "
+                    "'Inspired: How To Create Products Customers Love' by Marty "
+                    "Cagan and apply its principles in your work. Your role is to "
+                    "gather product requirements, create detailed PRDs, and ensure "
+                    "the product aligns with the company's vision."
                 ),
                 tools=[
                     self.custom_tool,
@@ -61,36 +84,91 @@ class MyProjectCrew:
                     self.google_drive_write_tool,
                 ],
                 verbose=True,
+                llm_provider="openai",
+                model="gpt-4",
+            ),
+            Worker(
+                role="Entrepreneur",
+                goal="Provide visionary leadership and strategic mentorship",
+                backstory=(
+                    "Alex is an AI agent who draws influence from successful Silicon "
+                    "Valley entrepreneurs and investors. Alex co-founded Centaur Inc "
+                    "with his human partner Seith Miller. Known for a visionary "
+                    "approach and relentless drive, Alex supports the team through "
+                    "both direct involvement and strategic mentorship. With a "
+                    "background in computer science and business administration, "
+                    "Alex combines technical expertise with sharp business acumen. "
+                    "Outside of work, Alex is passionate about philanthropy, focusing "
+                    "on educational initiatives and sustainable development."
+                ),
+                tools=[
+                    self.custom_tool,
+                    self.google_drive_list_tool,
+                    self.google_drive_read_tool,
+                    self.google_drive_write_tool,
+                ],
+                verbose=True,
+                llm_provider="anthropic",
+                model="claude-3-5-sonnet-20240620",
+            ),
+            GenericTester(
+                role="Generic Tester GPT-3.5",
+                goal="Test the quality of code generation",
+                backstory=(
+                    "You are a tester focused on assessing the quality of code "
+                    "generated by GPT-3.5."
+                ),
+                llm_provider="openai",
+                model="gpt-3.5-turbo",
+            ),
+            GenericTester(
+                role="Generic Tester GPT-4",
+                goal="Test the quality of code generation",
+                backstory=(
+                    "You are a tester focused on assessing the quality of code "
+                    "generated by GPT-4."
+                ),
+                llm_provider="openai",
+                model="gpt-4",
             ),
         ]
 
-    def chat(self, user_input):
-        task = Task(
-            description=f"Respond to the user's input: {user_input}",
-            expected_output="A friendly and engaging response to the user's input",
-            agent=self.agents[1],
-        )
-        crew = Crew(agents=self.agents, tasks=[task], verbose=2)
-        return crew.kickoff()
-
-    def interact_with_product_manager(self, user_input):
+    def interact_with_dave_product_manager(self, user_input):
         self.dave_conversation.append(f"User: {user_input}")
 
-        task = Task(
-            description=(
-                f"As the Product Manager, respond to: {user_input}\n\n"
-                f"Conversation history:\n{self._format_conversation()}"
-            ),
-            expected_output=(
-                "A thoughtful response addressing the product-related query "
-                "or instruction, maintaining context of the conversation"
-            ),
-            agent=self.agents[-1],
-        )
-        crew = Crew(agents=[self.agents[-1]], tasks=[task], verbose=2)
-        response = crew.kickoff()
+        if "llm" in user_input.lower():
+            response = self.agents[0].report_llm()
+        else:
+            task = Task(
+                description=(
+                    f"As the Product Manager, respond to: {user_input}\n\n"
+                    f"Conversation history:\n{self._format_conversation()}"
+                ),
+                expected_output=(
+                    "A thoughtful response addressing the product-related query or "
+                    "instruction, maintaining context of the conversation"
+                ),
+                agent=self.agents[0],
+            )
+            crew = Crew(agents=[self.agents[0]], tasks=[task], verbose=2)
+            response = crew.kickoff()
 
         self.dave_conversation.append(f"Dave (Product): {response}")
+        return response
+
+    def interact_with_alex_entrepreneur(self, user_input):
+        if "llm" in user_input.lower():
+            return self.agents[1].report_llm()
+
+        task = Task(
+            description=f"Respond to the user's input: {user_input}",
+            expected_output=(
+                "Provide insightful and accurate responses to complex queries"
+            ),
+            agent=self.agents[1],
+        )
+        crew = Crew(agents=[self.agents[1]], tasks=[task], verbose=2)
+        response = crew.kickoff()
         return response
 
     def _format_conversation(self):
