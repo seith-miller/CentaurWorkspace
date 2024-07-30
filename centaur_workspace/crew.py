@@ -71,11 +71,16 @@ class MyProjectCrew:
             "entrepreneur",
             "tester_gpt35",
             "tester_gpt4",
+            "bob",  # Added bob to the list
         ]:
             config = load_agent_config(agent_config)
             if "tools" in config:
                 config["tools"] = [self.tools[tool["name"]] for tool in config["tools"]]
-            if agent_config in ["product_manager", "entrepreneur"]:
+            if agent_config in [
+                "product_manager",
+                "entrepreneur",
+                "bob",
+            ]:  # Added bob here
                 agents.append(Worker(**config))
             else:
                 agents.append(GenericTester(**config))
@@ -117,6 +122,19 @@ class MyProjectCrew:
             agent=self.agents[1],
         )
         crew = Crew(agents=[self.agents[1]], tasks=[task], verbose=2)
+        response = crew.kickoff()
+        return response
+
+    def interact_with_bob(self, user_input):  # Added interaction method for Bob
+        if "llm" in user_input.lower():
+            return self.agents[4].report_llm()  # Assuming BOB is the fifth agent
+
+        task = Task(
+            description=f"Respond to the user's input: {user_input}",
+            expected_output=("Provide detailed technical information and solutions."),
+            agent=self.agents[4],
+        )
+        crew = Crew(agents=[self.agents[4]], tasks=[task], verbose=2)
         response = crew.kickoff()
         return response
 

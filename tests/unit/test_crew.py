@@ -1,21 +1,26 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from centaur_workspace.crew import MyProjectCrew, Worker, GenericTester
+from centaur_workspace.crew import MyProjectCrew
 
 
 @pytest.mark.unit
 class TestMyProjectCrew:
     @patch("centaur_workspace.crew.Agent")
     def test_create_agents(self, MockAgent):
-        mock_agents = [MagicMock(), MagicMock(), MagicMock(), MagicMock()]
+        mock_agents = [MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock()]
         MockAgent.side_effect = mock_agents
 
         crew = MyProjectCrew()
-        assert len(crew.agents) == 4
-        assert isinstance(crew.agents[0], Worker)
-        assert isinstance(crew.agents[1], Worker)
-        assert isinstance(crew.agents[2], GenericTester)
-        assert isinstance(crew.agents[3], GenericTester)
+        expected_roles = [
+            "Product Manager",
+            "Entrepreneur",
+            "Generic Tester GPT-3.5",
+            "Generic Tester GPT-4",
+            "Full Stack Software Engineer",
+        ]
+        assert len(crew.agents) == len(expected_roles)
+        for agent, expected_role in zip(crew.agents, expected_roles):
+            assert agent.role == expected_role
 
     @patch("centaur_workspace.crew.Agent")
     @patch("centaur_workspace.crew.Task")
